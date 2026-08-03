@@ -1,0 +1,17 @@
+# Copy to .dev.vars for local development. Never commit .dev.vars.
+DONORSCHOOSE_API_KEY=replace_with_partner_api_key
+OPENAI_API_KEY=replace_with_openai_api_key
+OPENAI_MODEL=gpt-5.6-luna
+STRIPE_SECRET_KEY=sk_test_replace_me
+# These HTTPS URLs should point back to this deployed Worker. Stripe redirects
+# there first; the Worker then returns to the active iOS checkout session.
+STRIPE_SUCCESS_URL=https://api.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}
+STRIPE_CANCEL_URL=https://api.example.com/checkout/cancel
+CHECKOUT_CALLBACK_SCHEME=refill
+
+# Optional defense-in-depth for /v1/ai/* and /v1/donations/*.
+# Use a randomly generated value of at least 32 characters.
+API_BEARER_TOKEN=replace_with_a_random_32_character_token
+
+# Exact, comma-separated browser origins. Native iOS requests normally omit Origin.
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000

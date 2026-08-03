@@ -1,1 +1,26 @@
 .aider*
+
+# macOS / Xcode
+.DS_Store
+build/
+DerivedData/
+*.xcuserstate
+**/xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Backend dependencies and local secrets
+Backend/node_modules/
+Backend/.dev.vars
+Backend/.wrangler/
+.env
+.env.*
+!.env.example
+
+# Local logs and coverage
+*.log
+coverage/

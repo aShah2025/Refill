@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.aadityashah.Refill.checkout</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(REFILL_CHECKOUT_CALLBACK_SCHEME)</string>
+			</array>
+		</dict>
+	</array>
+	<key>REFILL_BACKEND_BASE_URL</key>
+	<string>$(REFILL_BACKEND_BASE_URL)</string>
+	<key>REFILL_CHECKOUT_CALLBACK_SCHEME</key>
+	<string>$(REFILL_CHECKOUT_CALLBACK_SCHEME)</string>
+</dict>
+</plist>
