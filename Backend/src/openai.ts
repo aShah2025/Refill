@@ -11,7 +11,7 @@ import {
 import type { Dependencies, Env } from "./types";
 
 const DEFAULT_OPENAI_MODEL = "gpt-5.6-luna";
-const DEFAULT_OPENROUTER_MODEL = "openai/gpt-4o-mini";
+const DEFAULT_OPENROUTER_MODEL = "openrouter/free";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const OPENROUTER_RESPONSES_URL = "https://openrouter.ai/api/v1/responses";
 const CATEGORIES = [

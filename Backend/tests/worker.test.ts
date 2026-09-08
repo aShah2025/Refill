@@ -271,7 +271,7 @@ describe("POST /v1/ai/parse", () => {
     expect(response.status).toBe(200);
     expect(providerURL).toBe("https://openrouter.ai/api/v1/responses");
     expect(authorization).toBe("Bearer openrouter-secret");
-    expect(providerRequest.model).toBe("openai/gpt-4o-mini");
+    expect(providerRequest.model).toBe("openrouter/free");
     expect(providerRequest.text.format).toMatchObject({ type: "json_schema", strict: true });
     expect(JSON.stringify(await responseJSON(response))).not.toContain("openrouter-secret");
   });

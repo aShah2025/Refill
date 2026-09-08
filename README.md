@@ -28,7 +28,7 @@ See [Backend/README.md](Backend/README.md) for request/response contracts and ro
 - A current Xcode version that can open this project and an iOS 17+ Simulator or device.
 - Node.js 20+ and a Cloudflare account for the Worker.
 - An approved DonorsChoose API key. [DonorsChoose currently limits integrations to qualifying partners](https://www.donorschoose.org/api/docs/overview/); the listing endpoint is not an anonymous public feed.
-- An OpenRouter API key with access to the configured model, or an OpenAI API project/key. OpenRouter is the default and uses `OPENROUTER_MODEL=openai/gpt-4o-mini`; both providers use strict structured output.
+- An OpenRouter API key, or an OpenAI API project/key. OpenRouter is the default and uses the zero-cost `OPENROUTER_MODEL=openrouter/free` router; both providers use strict structured output. Free-router rate limits and availability are suitable for a demo, not a production SLA.
 - A Stripe account and test-mode secret key for checkout testing. Live payments additionally require a decided merchant/recipient model, disbursement and refund operations, tax-receipt policy, webhook reconciliation, and legal review.
 
 ## Run the Worker locally

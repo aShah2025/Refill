@@ -37,7 +37,7 @@ DonorsChoose currently provisions API access through partner relationships; obta
 
 ### `POST /v1/ai/parse`
 
-Calls the OpenRouter or OpenAI Responses API with strict JSON Schema Structured Outputs. OpenRouter is the default (`AI_PROVIDER=openrouter`) and `OPENROUTER_MODEL` defaults to `openai/gpt-4o-mini`. Set `AI_PROVIDER=openai` to use `OPENAI_API_KEY` and `OPENAI_MODEL` instead. The provider key remains on the Worker.
+Calls the OpenRouter or OpenAI Responses API with strict JSON Schema Structured Outputs. OpenRouter is the default (`AI_PROVIDER=openrouter`) and `OPENROUTER_MODEL` defaults to the zero-cost `openrouter/free` router. The free router selects an available model that supports the request's required features, but has lower rate limits and variable availability. Set `AI_PROVIDER=openai` to use `OPENAI_API_KEY` and `OPENAI_MODEL` instead. The provider key remains on the Worker.
 
 Request:
 
