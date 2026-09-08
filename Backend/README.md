@@ -37,7 +37,7 @@ DonorsChoose currently provisions API access through partner relationships; obta
 
 ### `POST /v1/ai/parse`
 
-Calls the OpenRouter or OpenAI Responses API with strict JSON Schema Structured Outputs. OpenRouter is the default (`AI_PROVIDER=openrouter`) and `OPENROUTER_MODEL` defaults to the zero-cost `openrouter/free` router. The free router selects an available model that supports the request's required features, but has lower rate limits and variable availability. Set `AI_PROVIDER=openai` to use `OPENAI_API_KEY` and `OPENAI_MODEL` instead. The provider key remains on the Worker.
+Calls OpenRouter Chat Completions or the OpenAI Responses API with strict JSON Schema Structured Outputs. OpenRouter is the default (`AI_PROVIDER=openrouter`) and `OPENROUTER_MODEL` defaults to the zero-cost `liquid/lfm-2.5-2.6b:free` model. Free models have lower rate limits and variable availability. Set `AI_PROVIDER=openai` to use `OPENAI_API_KEY` and `OPENAI_MODEL` instead. The provider key remains on the Worker.
 
 Request:
 
@@ -74,7 +74,7 @@ Response:
 }
 ```
 
-The Worker validates the provider result again and recomputes `estimatedTotal` from item quantities and unit-price estimates. See [OpenRouter Responses](https://openrouter.ai/docs/api/api-reference/responses/create-responses), [OpenRouter structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs), or [OpenAI Responses](https://platform.openai.com/docs/api-reference/responses).
+The Worker validates the provider result again and recomputes `estimatedTotal` from item quantities and unit-price estimates. See [OpenRouter structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs) or [OpenAI Responses](https://platform.openai.com/docs/api-reference/responses).
 
 ### `POST /v1/donations/checkout`
 

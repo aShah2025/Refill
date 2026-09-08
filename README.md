@@ -8,7 +8,7 @@ Refill is a SwiftUI iOS 17+ prototype for drafting classroom supply requests and
 | --- | --- | --- |
 | Classroom projects | The iOS app calls the Cloudflare Worker, which normalizes current California DonorsChoose listings. Successful results are cached on device for 24 hours. | A valid cache is used first; otherwise bundled projects appear with a **Sample data** label. |
 | School directory | The app reads public NCES school reference data from the Urban Institute Education Data Portal for four counties associated with CA-19. | School lookup reports that the directory is unavailable; it never turns school records into classroom requests. |
-| Request parsing | The Worker calls the configured OpenRouter or OpenAI Responses API with a strict JSON schema and returns the model name used. | The app uses a deterministic on-device parser and labels that result as a fallback. Funding-route suggestions remain local heuristics and are not provider eligibility decisions. |
+| Request parsing | The Worker calls OpenRouter Chat Completions or OpenAI Responses with a strict JSON schema and returns the model name used. | The app uses a deterministic on-device parser and labels that result as a fallback. Funding-route suggestions remain local heuristics and are not provider eligibility decisions. |
 | Donations | DonorsChoose projects open their official provider page. A locally created open need can use Stripe-hosted Checkout; the app records a receipt only after the Worker retrieves the session from Stripe and verifies `payment_status=paid`, amount, currency, and need ID. Configured sample projects can exercise the same flow only with Stripe test-mode credentials. | Sample projects offer an on-device card sandbox that accepts only `4242 4242 4242 4242`, never transmits card input, and creates a test-only activity entry. Real checkout remains disabled without backend configuration. |
 
 The DonorsChoose feed currently defaults to California-wide results (20 projects), not an exact congressional-district boundary. The school directory's county set is also not district geofencing. Provider fields that DonorsChoose does not supply—such as teacher biographies, headshots, years teaching, and student counts—must not be presented as verified data.
@@ -28,7 +28,7 @@ See [Backend/README.md](Backend/README.md) for request/response contracts and ro
 - A current Xcode version that can open this project and an iOS 17+ Simulator or device.
 - Node.js 20+ and a Cloudflare account for the Worker.
 - An approved DonorsChoose API key. [DonorsChoose currently limits integrations to qualifying partners](https://www.donorschoose.org/api/docs/overview/); the listing endpoint is not an anonymous public feed.
-- An OpenRouter API key, or an OpenAI API project/key. OpenRouter is the default and uses the zero-cost `OPENROUTER_MODEL=openrouter/free` router; both providers use strict structured output. Free-router rate limits and availability are suitable for a demo, not a production SLA.
+- An OpenRouter API key, or an OpenAI API project/key. OpenRouter is the default and uses the zero-cost `OPENROUTER_MODEL=liquid/lfm-2.5-2.6b:free` model; both providers use strict structured output. Free-model rate limits and availability are suitable for a demo, not a production SLA.
 - A Stripe account and test-mode secret key for checkout testing. Live payments additionally require a decided merchant/recipient model, disbursement and refund operations, tax-receipt policy, webhook reconciliation, and legal review.
 
 ## Run the Worker locally

@@ -256,9 +256,8 @@ describe("POST /v1/ai/parse", () => {
         estimatedTotal: 72,
       };
       return new Response(JSON.stringify({
-        status: "completed",
         model: "openai/gpt-4o-mini",
-        output_text: JSON.stringify(result),
+        choices: [{ message: { role: "assistant", content: JSON.stringify(result) } }],
       }), { status: 200 });
     };
 
@@ -269,10 +268,11 @@ describe("POST /v1/ai/parse", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(providerURL).toBe("https://openrouter.ai/api/v1/responses");
+    expect(providerURL).toBe("https://openrouter.ai/api/v1/chat/completions");
     expect(authorization).toBe("Bearer openrouter-secret");
-    expect(providerRequest.model).toBe("openrouter/free");
-    expect(providerRequest.text.format).toMatchObject({ type: "json_schema", strict: true });
+    expect(providerRequest.model).toBe("liquid/lfm-2.5-2.6b:free");
+    expect(providerRequest.response_format.json_schema).toMatchObject({ type: "json_schema", strict: true });
+    expect(providerRequest.provider.require_parameters).toBe(true);
     expect(JSON.stringify(await responseJSON(response))).not.toContain("openrouter-secret");
   });
 
