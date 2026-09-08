@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ParentFeedView: View {
     @EnvironmentObject private var state: AppState
-    @State private var scope: FeedScope = .forYou
+    @State private var scope: FeedScope = .all
 
     private enum FeedScope: Hashable {
         case forYou

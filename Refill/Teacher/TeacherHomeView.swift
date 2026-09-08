@@ -147,7 +147,7 @@ struct TeacherHomeView: View {
                     Text("Use secure AI analysis")
                         .font(SchoolTheme.headlineFont(size: 13))
                     Text(useLiveAI
-                         ? "Sends this request and classroom context to the configured Refill server and OpenAI."
+                         ? "Sends this request and classroom context to the configured Refill server and AI provider."
                          : "Keeps analysis on this device with the offline parser.")
                         .font(SchoolTheme.bodyFont(size: 11))
                         .foregroundStyle(SchoolTheme.mutedText)

@@ -1,5 +1,10 @@
 # Copy to .dev.vars for local development. Never commit .dev.vars.
 DONORSCHOOSE_API_KEY=replace_with_partner_api_key
+# Recommended AI provider for this project. Keep the key server-side.
+AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=replace_with_openrouter_api_key
+OPENROUTER_MODEL=openai/gpt-4o-mini
+# Optional alternative provider. Set AI_PROVIDER=openai to use these values.
 OPENAI_API_KEY=replace_with_openai_api_key
 OPENAI_MODEL=gpt-5.6-luna
 STRIPE_SECRET_KEY=sk_test_replace_me

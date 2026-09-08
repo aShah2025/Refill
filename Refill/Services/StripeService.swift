@@ -30,7 +30,50 @@ struct Receipt: Identifiable, Codable, Equatable {
         return formatter.string(from: createdAt)
     }
 
-    var isTest: Bool { method == "Stripe Test Checkout" }
+    var isTest: Bool { method.contains("Test") }
+    var isProcessorVerified: Bool { method != "Refill Test Card" }
+}
+
+nonisolated enum SampleCardValidator {
+    static let testCardNumber = "4242424242424242"
+    static let formattedTestCardNumber = "4242 4242 4242 4242"
+
+    static func formattedCardNumber(_ value: String) -> String {
+        let digits = String(value.filter(\.isNumber).prefix(16))
+        return stride(from: 0, to: digits.count, by: 4).map { start in
+            let startIndex = digits.index(digits.startIndex, offsetBy: start)
+            let endIndex = digits.index(startIndex, offsetBy: min(4, digits.count - start))
+            return String(digits[startIndex..<endIndex])
+        }.joined(separator: " ")
+    }
+
+    static func formattedExpiry(_ value: String) -> String {
+        let digits = String(value.filter(\.isNumber).prefix(4))
+        guard digits.count > 2 else { return digits }
+        let split = digits.index(digits.startIndex, offsetBy: 2)
+        return "\(digits[..<split])/\(digits[split...])"
+    }
+
+    static func isValidCardNumber(_ value: String) -> Bool {
+        value.filter(\.isNumber) == testCardNumber
+    }
+
+    static func isValidCVC(_ value: String) -> Bool {
+        let digits = value.filter(\.isNumber)
+        return digits.count == 3 && digits.count == value.count
+    }
+
+    static func isValidExpiry(_ value: String, now: Date = Date(), calendar: Calendar = .current) -> Bool {
+        let digits = value.filter(\.isNumber)
+        guard digits.count == 4,
+              let month = Int(digits.prefix(2)),
+              let year = Int(digits.suffix(2)),
+              (1...12).contains(month) else { return false }
+        let current = calendar.dateComponents([.month, .year], from: now)
+        guard let currentMonth = current.month, let currentYear = current.year else { return false }
+        let fullYear = 2_000 + year
+        return fullYear > currentYear || (fullYear == currentYear && month >= currentMonth)
+    }
 }
 
 enum DonationCheckoutError: LocalizedError {

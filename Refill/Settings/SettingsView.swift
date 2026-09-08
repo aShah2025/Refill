@@ -199,6 +199,22 @@ struct SettingsView: View {
 
     private var dataStatusSection: some View {
         Section {
+            LabeledContent("App mode") {
+                statusValue(
+                    AppConfig.BackendConfig.current.isConfigured ? "Connected" : "Demo",
+                    system: AppConfig.BackendConfig.current.isConfigured ? "checkmark.circle.fill" : "play.circle.fill",
+                    color: AppConfig.BackendConfig.current.isConfigured ? SchoolTheme.crayonTeal : SchoolTheme.crayonOrange
+                )
+            }
+
+            LabeledContent("Refill server") {
+                statusValue(
+                    AppConfig.BackendConfig.current.isConfigured ? "Configured" : "Not configured",
+                    system: AppConfig.BackendConfig.current.isConfigured ? "network" : "network.slash",
+                    color: AppConfig.BackendConfig.current.isConfigured ? SchoolTheme.crayonTeal : SchoolTheme.mutedText
+                )
+            }
+
             LabeledContent("Feed source", value: state.feedSourceLabel)
 
             LabeledContent("Content") {
@@ -241,12 +257,31 @@ struct SettingsView: View {
             }
             .disabled(state.needsLoading)
         } header: {
-            Text("Data & API")
+            Text("Connection status")
         } footer: {
-            if state.feedContainsSampleData {
-                Text("Clearly labeled sample classroom requests may appear when a live source is unavailable.")
-            }
+            Text(connectionFooter)
         }
+    }
+
+    private func statusValue(_ text: String, system: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: system)
+                .foregroundStyle(color)
+                .accessibilityHidden(true)
+            Text(text)
+                .foregroundStyle(SchoolTheme.ink)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var connectionFooter: String {
+        if !AppConfig.BackendConfig.current.isConfigured {
+            return "Demo mode keeps the core experience usable with clearly labeled sample data. Provider keys stay on the server and are never included in the app."
+        }
+        if state.feedContainsSampleData {
+            return "The server is configured, but some sample classroom requests are shown because the live source is unavailable or returned no projects."
+        }
+        return "Live classroom data is connected. Payment availability is checked only when you begin a secure checkout."
     }
 
     private var resetSection: some View {

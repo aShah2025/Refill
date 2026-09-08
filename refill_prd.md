@@ -22,9 +22,9 @@ Refill is not yet a production donation marketplace. The current app is a functi
 | Community feed | Configured builds load normalized DonorsChoose projects through the Worker, retain a 24-hour cache, and visibly identify source. An outage uses valid cache, then bundled sample records. | Conditional live. DonorsChoose approval/key required. Default feed is California-wide, not exact CA-19. |
 | School lookup | Reads public NCES reference data from the Urban Institute for four counties and validates the returned county codes. | Live reference data, not classroom needs and not district-boundary proof. |
 | Teacher request creation | Teachers review parsed items, totals, category, urgency, and summary before saving a local request. | Functional locally; requests are not published to a shared backend or DonorsChoose. |
-| AI parsing | Optional Worker call to OpenAI Responses with strict schema; deterministic on-device parser is labeled as fallback. | Conditional live. Model output remains an estimate and requires teacher review. |
+| AI parsing | Optional Worker call to OpenRouter or OpenAI Responses with strict schema; deterministic on-device parser is labeled as fallback. | Conditional live. Model output remains an estimate and requires teacher review. |
 | Funding matches | Category-based local heuristics generate DonorsChoose, parent, foundation, business, and district routes with share/open actions. | Guidance only; confidence is category fit, not eligibility or provider approval. |
-| Donations | DonorsChoose projects use their official provider link. Separate Stripe Checkout for locally created requests records a local receipt only after server verification. Samples can exercise the same card-entry flow only in Stripe test mode and are excluded from real impact totals. | Testable, but not launch-ready until the recipient/disbursement model, webhooks, refunds, receipts, and reconciliation exist. Stripe does not fund DonorsChoose automatically. |
+| Donations | DonorsChoose projects use their official provider link. Separate Stripe Checkout for locally created requests records a local receipt only after server verification. Samples use Stripe test mode when configured and fall back to an on-device, test-card-only UI sandbox; both are excluded from real impact totals. | Testable, but not launch-ready until the recipient/disbursement model, webhooks, refunds, receipts, and reconciliation exist. Stripe does not fund DonorsChoose automatically. |
 | Alerts and impact | Local notification cards, favorites, request progress, and verified checkout summaries persist on device. | No remote push, provider webhooks, cross-user real-time updates, or authoritative impact ledger. |
 
 ## Required product behavior
@@ -32,7 +32,7 @@ Refill is not yet a production donation marketplace. The current app is a functi
 ### Provenance and degraded operation
 
 1. Every need must show `DonorsChoose`, `Refill community`, or `Sample data` provenance.
-2. Sample needs must be unmistakable, may use only Stripe test-mode checkout, and must never charge a real card or count as real impact.
+2. Sample needs must be unmistakable, may use only Stripe test-mode checkout or the local test-card sandbox, and must never transmit sandbox card input, charge a real card, or count as real impact.
 3. Cached provider data must retain its original provenance and expose a stale/offline state when appropriate.
 4. Missing provider fields must remain unavailable or use clearly generic UI; Refill must not invent a teacher headshot, biography, years taught, student count, or provider-verified item detail.
 5. The launch version must use an exact, tested CA-19 boundary/ZIP policy or describe its broader California coverage without claiming district precision.
@@ -59,9 +59,9 @@ The two models must not be represented as equivalent transactions.
 
 ## Integration requirements
 
-- The iOS app receives only public base/callback configuration. DonorsChoose, OpenAI, and Stripe credentials remain in Cloudflare Worker secrets.
+- The iOS app receives only public base/callback configuration. DonorsChoose, OpenRouter/OpenAI, and Stripe credentials remain in Cloudflare Worker secrets.
 - `/v1/needs` fails closed without the DonorsChoose key. The app owns the labeled cache/sample fallback; the Worker never fabricates provider data.
-- `/v1/ai/parse` uses OpenAI Structured Outputs, bounds input/output, treats teacher text as untrusted, disables response storage, and validates the result again before returning it.
+- `/v1/ai/parse` uses the configured provider's Structured Outputs support, bounds input/output, treats teacher text as untrusted, disables response storage, and validates the result again before returning it.
 - Checkout uses Stripe-hosted payment pages, a client-generated idempotency key, Worker-owned HTTPS-to-app return bridges, bounded USD amounts, callback/session validation, and server-side verification. Webhooks are required for durable production fulfillment.
 - Authentication must be user-scoped. A static bearer token embedded in iOS is not an acceptable public-release control; CORS is not authentication.
 - Upstream errors exposed to clients must be safe and must not leak keys, authorization headers, provider bodies, or keyed URLs.
@@ -87,7 +87,7 @@ Public release is blocked until all of the following are complete:
 
 ## Acceptance criteria
 
-- With no backend URL, onboarding and request drafting work; the feed is labeled sample and test card checkout is disabled.
+- With no backend URL, onboarding and request drafting work; the feed is labeled sample and the local test-card sandbox remains available while real checkout is disabled.
 - With a healthy Worker and approved DonorsChoose key, returned projects are labeled DonorsChoose, provider links remain HTTPS DonorsChoose URLs, and a fresh cache is usable during a later outage.
 - Missing or malformed provider fields do not crash the app or become fabricated profile facts.
 - Live AI reports the returned model; unavailable/transient AI errors use a visibly labeled deterministic fallback; validation errors are not silently hidden.

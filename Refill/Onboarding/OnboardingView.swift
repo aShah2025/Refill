@@ -21,24 +21,9 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             ChalkboardBackground()
-                .overlay(
-                    ZStack {
-                        ForEach(0..<20, id: \.self) { i in
-                            Image(systemName: ["plus", "minus", "multiply", "divide", "x.squareroot", "function", "atom", "books.vertical", "graduationcap", "pencil"][i % 10])
-                                .font(.system(size: CGFloat.random(in: 18...46), weight: .heavy))
-                                .foregroundStyle(.white.opacity(0.05))
-                                .offset(
-                                    x: CGFloat.random(in: -180...180),
-                                    y: CGFloat.random(in: -380...380)
-                                )
-                                .rotationEffect(.degrees(.random(in: -25...25)))
-                        }
-                    }
-                )
-                // This is purely decorative. Keep its full-screen Canvas and symbols
-                // out of hit testing so they can never sit in front of the controls.
-                .allowsHitTesting(false)
                 .onAppear { animateBackground.toggle() }
+
+            onboardingDecoration
 
             VStack(spacing: 0) {
                 topBar
@@ -64,6 +49,30 @@ struct OnboardingView: View {
                 state.profile.zip = school.zip
             }
         }
+    }
+
+    private var onboardingDecoration: some View {
+        GeometryReader { proxy in
+            let placements: [(String, CGFloat, CGFloat, Double)] = [
+                ("books.vertical.fill", 0.10, 0.18, -12),
+                ("atom", 0.88, 0.22, 14),
+                ("pencil.and.ruler.fill", 0.12, 0.72, 9),
+                ("graduationcap.fill", 0.86, 0.78, -10),
+                ("function", 0.83, 0.50, 7),
+                ("x.squareroot", 0.15, 0.45, -8)
+            ]
+
+            ForEach(Array(placements.enumerated()), id: \.offset) { index, item in
+                Image(systemName: item.0)
+                    .font(.system(size: index.isMultiple(of: 2) ? 34 : 27, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.055))
+                    .rotationEffect(.degrees(item.3))
+                    .position(x: proxy.size.width * item.1, y: proxy.size.height * item.2)
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     // MARK: - Top bar (back + progress)

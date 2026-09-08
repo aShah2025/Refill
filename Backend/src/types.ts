@@ -1,5 +1,8 @@
 export interface Env {
   DONORSCHOOSE_API_KEY?: string;
+  AI_PROVIDER?: string;
+  OPENROUTER_API_KEY?: string;
+  OPENROUTER_MODEL?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
   STRIPE_SECRET_KEY?: string;

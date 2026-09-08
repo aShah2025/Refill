@@ -336,6 +336,23 @@ final class ServiceFoundationTests: XCTestCase {
         XCTAssertEqual((payload["need"] as? [String: Any])?["origin"] as? String, "sample")
     }
 
+    func testBuiltInSampleCardValidatorAcceptsOnlyTheSafeTestCard() {
+        XCTAssertEqual(SampleCardValidator.formattedCardNumber("4242424242424242"), "4242 4242 4242 4242")
+        XCTAssertTrue(SampleCardValidator.isValidCardNumber("4242 4242 4242 4242"))
+        XCTAssertFalse(SampleCardValidator.isValidCardNumber("4000 0000 0000 0002"))
+        XCTAssertFalse(SampleCardValidator.isValidCardNumber("4111 1111 1111 1111"))
+        XCTAssertEqual(SampleCardValidator.formattedExpiry("1230"), "12/30")
+        XCTAssertTrue(
+            SampleCardValidator.isValidExpiry(
+                "12/30",
+                now: Date(timeIntervalSince1970: 1_721_649_600),
+                calendar: Calendar(identifier: .gregorian)
+            )
+        )
+        XCTAssertTrue(SampleCardValidator.isValidCVC("123"))
+        XCTAssertFalse(SampleCardValidator.isValidCVC("12"))
+    }
+
     private func makeLiveNeed() -> ClassroomNeed {
         ClassroomNeed(
             id: StableIdentifier.uuid(namespace: "refill.need.local", value: "unit-test-need"),

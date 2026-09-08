@@ -73,12 +73,12 @@ struct PaperCard<Content: View>: View {
             .background(
                 ZStack {
                     RoundedRectangle(cornerRadius: 18)
-                        .fill(SchoolTheme.paper)
+                        .fill(SchoolTheme.cardBackground)
                     RoundedRectangle(cornerRadius: 18)
                         .stroke(SchoolTheme.subtleBorder, lineWidth: 1)
                 }
             )
-            .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 3)
+            .shadow(color: SchoolTheme.chalkboardDeep.opacity(0.08), radius: 12, x: 0, y: 6)
     }
 }
 

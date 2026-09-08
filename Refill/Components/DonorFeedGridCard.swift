@@ -203,7 +203,7 @@ struct DonationCheckoutView: View {
     @State private var message = ""
     @State private var isProcessing = false
     @State private var paymentError: String?
-    @State private var receipt: Receipt?
+    @State private var checkoutSheet: DonationCheckoutSheet?
 
     private let presets: [Double] = [5, 10, 25, 50, 100]
 
@@ -291,9 +291,9 @@ struct DonationCheckoutView: View {
             if !AppConfig.BackendConfig.current.isCheckoutConfigured {
                 Label(
                     need.resolvedOrigin == .sample
-                        ? "Test card checkout is not configured in this build."
+                        ? "Built-in card sandbox · no real charge"
                         : "Live checkout is not configured in this build.",
-                    systemImage: "wrench.and.screwdriver.fill"
+                    systemImage: need.resolvedOrigin == .sample ? "testtube.2" : "wrench.and.screwdriver.fill"
                 )
                     .font(SchoolTheme.bodyFont(size: 12))
                     .foregroundStyle(SchoolTheme.crayonOrange)
@@ -315,7 +315,7 @@ struct DonationCheckoutView: View {
             }
             .buttonStyle(.plain)
             .disabled(!canCheckout || isProcessing)
-            .accessibilityHint("Opens Stripe's secure hosted payment form")
+            .accessibilityHint(checkoutAccessibilityHint)
         }
         .padding(compact ? 0 : 14)
         .background {
@@ -336,12 +336,27 @@ struct DonationCheckoutView: View {
         } message: {
             Text(paymentError ?? "Please try again.")
         }
-        .sheet(item: $receipt) { ReceiptView(receipt: $0) }
+        .sheet(item: $checkoutSheet) { sheet in
+            switch sheet {
+            case .sampleCard:
+                SampleCardCheckoutView(
+                    need: need,
+                    amount: selectedAmount,
+                    donorName: checkoutDonorName,
+                    message: message
+                ) { testReceipt in
+                    record(testReceipt)
+                    checkoutSheet = .receipt(testReceipt)
+                }
+            case .receipt(let receipt):
+                ReceiptView(receipt: receipt)
+            }
+        }
     }
 
     private var canCheckout: Bool {
         need.isAcceptingSupport
-            && AppConfig.BackendConfig.current.isCheckoutConfigured
+            && (need.resolvedOrigin == .sample || AppConfig.BackendConfig.current.isCheckoutConfigured)
             && selectedAmount >= 1
             && selectedAmount <= 1_000
             && selectedAmount <= need.amountRemaining
@@ -350,15 +365,33 @@ struct DonationCheckoutView: View {
     private var buttonTitle: String {
         if isProcessing { return "Opening secure checkout…" }
         let amount = selectedAmount.formatted(.currency(code: "USD").precision(.fractionLength(0)))
-        return need.resolvedOrigin == .sample ? "Try card payment · \(amount)" : "Donate \(amount)"
+        return "Donate \(amount)"
+    }
+
+    private var usesBuiltInSampleCheckout: Bool {
+        need.resolvedOrigin == .sample && !AppConfig.BackendConfig.current.isCheckoutConfigured
+    }
+
+    private var checkoutDonorName: String {
+        let donorName = state.profile.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return donorName.isEmpty ? "A Refill supporter" : donorName
+    }
+
+    private var checkoutAccessibilityHint: String {
+        usesBuiltInSampleCheckout
+            ? "Opens the built-in test card form. Real card numbers are not accepted."
+            : "Opens Stripe's secure hosted payment form"
     }
 
     private func startCheckout() {
         guard canCheckout else { return }
-        isProcessing = true
         paymentError = nil
-        let donorName = state.profile.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let displayName = donorName.isEmpty ? "A Refill supporter" : donorName
+        if usesBuiltInSampleCheckout {
+            checkoutSheet = .sampleCard
+            return
+        }
+
+        isProcessing = true
         let email = state.profile.email.trimmingCharacters(in: .whitespacesAndNewlines)
 
         Task {
@@ -366,33 +399,199 @@ struct DonationCheckoutView: View {
                 let verifiedReceipt = try await DonationCheckoutService.shared.checkout(
                     amount: selectedAmount,
                     to: need,
-                    from: displayName,
+                    from: checkoutDonorName,
                     donorEmail: email.isEmpty ? nil : email,
                     message: message
                 )
-                state.addDonation(
-                    Donation(
-                        needId: verifiedReceipt.needId,
-                        needTitle: verifiedReceipt.needTitle,
-                        donorName: verifiedReceipt.donorName,
-                        amount: verifiedReceipt.amount,
-                        source: .parents,
-                        message: verifiedReceipt.message,
-                        createdAt: verifiedReceipt.createdAt,
-                        transactionId: verifiedReceipt.transactionId,
-                        isVerified: true,
-                        isTest: verifiedReceipt.isTest
-                    ),
-                    to: verifiedReceipt.needId
-                )
-                receipt = verifiedReceipt
-                message = ""
-                selectedAmount = min(10, max(need.amountRemaining - verifiedReceipt.amount, 1))
+                record(verifiedReceipt)
+                checkoutSheet = .receipt(verifiedReceipt)
             } catch {
                 paymentError = error.localizedDescription
             }
             isProcessing = false
         }
+    }
+
+    private func record(_ completedReceipt: Receipt) {
+        state.addDonation(
+            Donation(
+                needId: completedReceipt.needId,
+                needTitle: completedReceipt.needTitle,
+                donorName: completedReceipt.donorName,
+                amount: completedReceipt.amount,
+                source: .parents,
+                message: completedReceipt.message,
+                createdAt: completedReceipt.createdAt,
+                transactionId: completedReceipt.transactionId,
+                isVerified: completedReceipt.isProcessorVerified,
+                isTest: completedReceipt.isTest
+            ),
+            to: completedReceipt.needId
+        )
+        message = ""
+        selectedAmount = min(10, max(need.amountRemaining - completedReceipt.amount, 1))
+    }
+}
+
+private enum DonationCheckoutSheet: Identifiable {
+    case sampleCard
+    case receipt(Receipt)
+
+    var id: String {
+        switch self {
+        case .sampleCard: return "sample-card"
+        case .receipt(let receipt): return receipt.id.uuidString
+        }
+    }
+}
+
+private struct SampleCardCheckoutView: View {
+    let need: ClassroomNeed
+    let amount: Double
+    let donorName: String
+    let message: String
+    let onComplete: (Receipt) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var cardholderName = ""
+    @State private var cardNumber = ""
+    @State private var expiry = ""
+    @State private var cvc = ""
+    @State private var validationError: String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Credit or debit card", systemImage: "creditcard.fill")
+                            .font(SchoolTheme.displayFont(size: 24))
+                            .foregroundStyle(SchoolTheme.denim)
+                        Text("Presentation demo · enter the test card below. Refill never stores or sends what you type.")
+                            .font(SchoolTheme.bodyFont(size: 14))
+                            .foregroundStyle(SchoolTheme.mutedText)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("TEST CARD")
+                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                            .tracking(0.8)
+                            .foregroundStyle(SchoolTheme.crayonOrange)
+                        Text(SampleCardValidator.formattedTestCardNumber)
+                            .font(.system(size: 18, weight: .bold, design: .monospaced))
+                            .textSelection(.enabled)
+                        Text("Use any future MM/YY and any 3-digit CVC.")
+                            .font(SchoolTheme.bodyFont(size: 12))
+                            .foregroundStyle(SchoolTheme.mutedText)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(SchoolTheme.crayonOrange.opacity(0.09)))
+
+                    VStack(spacing: 12) {
+                        cardField("Name on card", text: $cardholderName, contentType: .name)
+                        cardField("Card number", text: $cardNumber, keyboard: .numberPad)
+                            .onChange(of: cardNumber) { _, value in
+                                cardNumber = SampleCardValidator.formattedCardNumber(value)
+                            }
+                        HStack(spacing: 12) {
+                            cardField("MM/YY", text: $expiry, keyboard: .numberPad)
+                                .onChange(of: expiry) { _, value in
+                                    expiry = SampleCardValidator.formattedExpiry(value)
+                                }
+                            cardField("CVC", text: $cvc, keyboard: .numberPad)
+                                .onChange(of: cvc) { _, value in
+                                    cvc = String(value.filter(\.isNumber).prefix(3))
+                                }
+                        }
+                    }
+
+                    if let validationError {
+                        Label(validationError, systemImage: "exclamationmark.triangle.fill")
+                            .font(SchoolTheme.bodyFont(size: 12))
+                            .foregroundStyle(SchoolTheme.apple)
+                    }
+
+                    Button(action: completeTestPayment) {
+                        Label(
+                            "Pay \(amount.formatted(.currency(code: "USD").precision(.fractionLength(2))))",
+                            systemImage: "checkmark.shield.fill"
+                        )
+                        .font(SchoolTheme.headlineFont(size: 14))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(SchoolTheme.apple)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(18)
+            }
+            .background(LinedPaperBackground())
+            .navigationTitle("Card details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+        .onAppear {
+            if cardholderName.isEmpty { cardholderName = donorName }
+        }
+    }
+
+    private func cardField(
+        _ title: String,
+        text: Binding<String>,
+        keyboard: UIKeyboardType = .default,
+        contentType: UITextContentType? = nil
+    ) -> some View {
+        TextField(title, text: text)
+            .textContentType(contentType)
+            .keyboardType(keyboard)
+            .textInputAutocapitalization(title == "Name on card" ? .words : .never)
+            .autocorrectionDisabled()
+            .padding(13)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(SchoolTheme.subtleBorder, lineWidth: 1))
+    }
+
+    private func completeTestPayment() {
+        guard SampleCardValidator.isValidCardNumber(cardNumber) else {
+            validationError = "Use the test card shown above. Real card numbers are not accepted."
+            return
+        }
+        guard SampleCardValidator.isValidExpiry(expiry) else {
+            validationError = "Enter a future expiration date in MM/YY format."
+            return
+        }
+        guard SampleCardValidator.isValidCVC(cvc) else {
+            validationError = "Enter any 3-digit test CVC."
+            return
+        }
+        let normalizedName = cardholderName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedName.isEmpty else {
+            validationError = "Enter a name for the test card."
+            return
+        }
+
+        validationError = nil
+        onComplete(
+            Receipt(
+                id: UUID(),
+                needId: need.id,
+                needTitle: need.title,
+                teacherName: need.teacherName,
+                amount: amount,
+                donorName: normalizedName,
+                message: message.trimmingCharacters(in: .whitespacesAndNewlines),
+                method: "Refill Test Card",
+                last4: "4242",
+                transactionId: "test_\(UUID().uuidString.lowercased())",
+                createdAt: Date()
+            )
+        )
     }
 }
 
@@ -410,15 +609,19 @@ struct ReceiptView: View {
                         .padding(.top, 20)
                     Text(receipt.isTest ? "Test payment complete" : "Thank you!")
                         .font(SchoolTheme.displayFont(size: 28))
-                    Text(receipt.isTest
-                         ? "Stripe verified the \(receipt.formattedAmount) test checkout for \(receipt.needTitle)."
-                         : "Stripe verified your \(receipt.formattedAmount) contribution for \(receipt.needTitle).")
+                    Text(receipt.method == "Refill Test Card"
+                         ? "Refill completed the \(receipt.formattedAmount) card sandbox for \(receipt.needTitle)."
+                         : receipt.isTest
+                            ? "Stripe verified the \(receipt.formattedAmount) test checkout for \(receipt.needTitle)."
+                            : "Stripe verified your \(receipt.formattedAmount) contribution for \(receipt.needTitle).")
                         .font(SchoolTheme.bodyFont(size: 15))
                         .foregroundStyle(SchoolTheme.mutedText)
                         .multilineTextAlignment(.center)
-                    Text(receipt.isTest
-                         ? "This used Stripe test mode. No real card was charged and no classroom received funds."
-                         : "This receipt confirms payment to the configured Refill Stripe account; it does not by itself confirm classroom disbursement or a tax deduction.")
+                    Text(receipt.method == "Refill Test Card"
+                         ? "This was an on-device UI simulation. Nothing was transmitted, no real card was charged, and no classroom received funds."
+                         : receipt.isTest
+                            ? "This used Stripe test mode. No real card was charged and no classroom received funds."
+                            : "This receipt confirms payment to the configured Refill Stripe account; it does not by itself confirm classroom disbursement or a tax deduction.")
                         .font(SchoolTheme.bodyFont(size: 12))
                         .foregroundStyle(SchoolTheme.crayonOrange)
                         .multilineTextAlignment(.center)

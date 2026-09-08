@@ -1,6 +1,6 @@
 # Refill Cloudflare Worker
 
-This directory contains the server-side integration boundary for Refill. It uses the Cloudflare Workers `fetch` runtime directly—there are no OpenAI, Stripe, or DonorsChoose runtime SDK dependencies.
+This directory contains the server-side integration boundary for Refill. It uses the Cloudflare Workers `fetch` runtime directly—there are no OpenRouter, OpenAI, Stripe, or DonorsChoose runtime SDK dependencies.
 
 The Worker never returns sample needs, fake AI results, fake Checkout Sessions, or fake payment success. Missing credentials and provider failures produce explicit non-2xx responses.
 
@@ -37,7 +37,7 @@ DonorsChoose currently provisions API access through partner relationships; obta
 
 ### `POST /v1/ai/parse`
 
-Calls the OpenAI Responses API with strict JSON Schema Structured Outputs. `OPENAI_MODEL` is configurable and defaults to the cost-conscious `gpt-5.6-luna` model.
+Calls the OpenRouter or OpenAI Responses API with strict JSON Schema Structured Outputs. OpenRouter is the default (`AI_PROVIDER=openrouter`) and `OPENROUTER_MODEL` defaults to `openai/gpt-4o-mini`. Set `AI_PROVIDER=openai` to use `OPENAI_API_KEY` and `OPENAI_MODEL` instead. The provider key remains on the Worker.
 
 Request:
 
@@ -74,7 +74,7 @@ Response:
 }
 ```
 
-The Worker validates the provider result again and recomputes `estimatedTotal` from item quantities and unit-price estimates. OpenAI API documentation: [Responses structured output format](https://platform.openai.com/docs/api-reference/responses) and [model guidance](https://developers.openai.com/api/docs/guides/latest-model).
+The Worker validates the provider result again and recomputes `estimatedTotal` from item quantities and unit-price estimates. See [OpenRouter Responses](https://openrouter.ai/docs/api/api-reference/responses/create-responses), [OpenRouter structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs), or [OpenAI Responses](https://platform.openai.com/docs/api-reference/responses).
 
 ### `POST /v1/donations/checkout`
 
@@ -164,7 +164,7 @@ Tests mock all upstream HTTP calls. They never require or contact live provider 
 npm run check
 ```
 
-The suite covers CORS, authentication, bounded filters, DonorsChoose normalization, safe provider errors, OpenAI strict-schema payloads and response validation, Stripe idempotency, Checkout form creation, and paid/unpaid verification.
+The suite covers CORS, authentication, bounded filters, DonorsChoose normalization, safe provider errors, OpenRouter/OpenAI strict-schema payloads and response validation, Stripe idempotency, Checkout form creation, and paid/unpaid verification.
 
 ## Deploy
 
@@ -173,6 +173,8 @@ Authenticate Wrangler and set secrets; do not put them in `wrangler.toml`:
 ```sh
 npx wrangler login
 npx wrangler secret put DONORSCHOOSE_API_KEY
+npx wrangler secret put OPENROUTER_API_KEY
+# Optional alternative when AI_PROVIDER=openai:
 npx wrangler secret put OPENAI_API_KEY
 npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_SUCCESS_URL
@@ -193,5 +195,5 @@ Set `CORS_ALLOWED_ORIGINS` in `wrangler.toml` or the Cloudflare dashboard to exa
 - Use a Stripe restricted key where possible, test mode before live mode, and a webhook for durable fulfillment/reconciliation. Redirect verification alone is not a webhook substitute.
 - Keep success and cancellation URLs under an HTTPS domain you control. The included app expects the Worker bridge paths shown above; the success URL must contain `{CHECKOUT_SESSION_ID}`, and the callback scheme must match the iOS build setting.
 - Do not log authorization headers, provider responses, donor messages, or API URLs containing the DonorsChoose key.
-- Tell users that classroom request text is sent to OpenAI, minimize personal data, and apply the privacy/retention policy appropriate for the deployment.
+- Tell users that classroom request text is sent to the configured AI provider, minimize personal data, and apply the privacy/retention policy appropriate for the deployment.
 - Review DonorsChoose data-display, referral, privacy, and transactional terms before production use.
